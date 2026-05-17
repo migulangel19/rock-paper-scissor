@@ -1,0 +1,39 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Entornos virtuales ---
+venv/
+.venv/
+env/
+
+# --- Entornos / IDEs ---
+.claude/
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Privacidad: datos biométricos ---
+# La DB de embeddings faciales contiene datos identificativos.
+# Cada usuario se registra en local con app.py -> Registrar.
+usuarios.pkl
+
+# --- Archivos pesados / regenerables / temporales ---
+*.rar
+*.zip
+*.tar.gz
+*.log
+*.tmp
+
+# --- Notebooks: outputs ya cacheados (opcional) ---
+.ipynb_checkpoints/
+
+# --- Documentos personales del profesor ---
+Rubrica.xlsx
