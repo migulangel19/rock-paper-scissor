@@ -127,18 +127,32 @@ def _pct(score):
 
 # ── Utilidades visuales ───────────────────────────────────────────────────────
 
-def _barra(frame, actual, total):
-    h, w   = frame.shape[:2]
-    BAR_W  = 320
-    x0, y0 = (w - BAR_W) // 2, h - 45
-    cv2.rectangle(frame, (x0, y0), (x0 + BAR_W, y0 + 18), (40, 40, 40), -1)
-    cv2.rectangle(frame, (x0, y0),
-                  (x0 + int(BAR_W * min(actual, total) / total), y0 + 18),
-                  (0, 220, 80), -1)
-    cv2.putText(frame, f"{actual}/{total}", (x0 + BAR_W + 8, y0 + 14),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+def _escala(frame) -> float:
+    """Factor de escala respecto a un frame de referencia de 640 px de ancho.
 
-def _esquinas(img, x, y, w, h, color, grosor=3, largo=22):
+    Permite que textos, barras y marcos se vean igual de bien con cualquier
+    resolución de webcam (640x480, 1280x720, etc.)."""
+    return max(0.6, frame.shape[1] / 640.0)
+
+def _barra(frame, actual, total):
+    h, w  = frame.shape[:2]
+    s     = _escala(frame)
+    bar_w = int(w * 0.5)
+    bar_h = int(18 * s)
+    x0, y0 = (w - bar_w) // 2, h - int(45 * s)
+    cv2.rectangle(frame, (x0, y0), (x0 + bar_w, y0 + bar_h), (40, 40, 40), -1)
+    cv2.rectangle(frame, (x0, y0),
+                  (x0 + int(bar_w * min(actual, total) / total), y0 + bar_h),
+                  (0, 220, 80), -1)
+    cv2.putText(frame, f"{actual}/{total}", (x0 + bar_w + int(8 * s), y0 + int(14 * s)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5 * s, (200, 200, 200), max(1, int(s)))
+
+def _esquinas(img, x, y, w, h, color, grosor=None, largo=None):
+    s = _escala(img)
+    if grosor is None:
+        grosor = max(2, int(3 * s))
+    if largo is None:
+        largo = int(22 * s)
     for v, p1, p2 in [
         ((x,   y),   (x+largo,   y),     (x,   y+largo)),
         ((x+w, y),   (x+w-largo, y),     (x+w, y+largo)),
@@ -163,6 +177,7 @@ def registrar(nombre):
         raise RuntimeError("No se pudo abrir la cámara")
 
     win = f"Registro - {nombre}"
+    cv2.namedWindow(win, cv2.WINDOW_NORMAL)   # ventana redimensionable
 
     # ── Esperar ESPACIO con cara visible ──────────────────────────────────────
     listo = False
@@ -172,11 +187,13 @@ def registrar(nombre):
             break
         caras = _detectar(detector, frame)
         display = frame.copy()
+        s = _escala(display)
         for face in caras:
             x, y, w, h = _bbox(face)
-            cv2.rectangle(display, (x, y), (x+w, y+h), (0, 255, 255), 2)
+            cv2.rectangle(display, (x, y), (x+w, y+h), (0, 255, 255), max(1, int(2 * s)))
         cv2.putText(display, "ESPACIO: iniciar | ESC: cancelar",
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 255), 2)
+                    (int(10 * s), int(30 * s)), cv2.FONT_HERSHEY_SIMPLEX, 0.65 * s,
+                    (0, 255, 255), max(1, int(2 * s)))
         cv2.imshow(win, display)
         key = cv2.waitKey(1) & 0xFF
         if key == 32:
@@ -184,7 +201,8 @@ def registrar(nombre):
                 listo = True
             else:
                 cv2.putText(display, "No se detecta cara, acercate",
-                            (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                            (int(10 * s), int(60 * s)), cv2.FONT_HERSHEY_SIMPLEX, 0.6 * s,
+                            (0, 0, 255), max(1, int(2 * s)))
                 cv2.imshow(win, display)
                 cv2.waitKey(800)
         elif key == 27:
@@ -201,14 +219,16 @@ def registrar(nombre):
             break
         caras = _detectar(detector, frame)
         display = frame.copy()
+        s = _escala(display)
         if caras:
             face    = caras[0]
             x, y, w, h = _bbox(face)
             emb = _embedding(recognizer, frame, face)
             embeddings.append(emb)
-            cv2.rectangle(display, (x, y), (x+w, y+h), (0, 220, 80), 2)
+            cv2.rectangle(display, (x, y), (x+w, y+h), (0, 220, 80), max(1, int(2 * s)))
         cv2.putText(display, "Muevete con naturalidad",
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 220, 80), 2)
+                    (int(10 * s), int(30 * s)), cv2.FONT_HERSHEY_SIMPLEX, 0.8 * s,
+                    (0, 220, 80), max(1, int(2 * s)))
         _barra(display, len(embeddings), N_CAPTURAS)
         cv2.imshow(win, display)
         if cv2.waitKey(1) & 0xFF == 27:
@@ -229,16 +249,15 @@ def registrar(nombre):
 
 # ── Login ─────────────────────────────────────────────────────────────────────
 
-def login(streak_secs: float = 5.0, welcome_secs: float = 1.5):
+def login(streak_secs: float = 1.5, welcome_secs: float = 1.5):
     """Bucle de login.
 
     Cuando detecta al mismo usuario con ≥ 80% de confianza durante
     `streak_secs` segundos seguidos, lo da por identificado, muestra
     "Bienvenido, ..." durante `welcome_secs` y devuelve el nombre.
 
-    Pensado para una demo: con `streak_secs=5` el público ve durante
-    unos segundos cómo la caja verde sigue la cara con el nombre y la
-    confianza antes de pasar al juego.
+    El streak evita falsos positivos puntuales: exige que la misma
+    persona se reconozca de forma sostenida antes de cerrar el login.
     """
     db = cargar_db()
     if not db:
@@ -257,6 +276,10 @@ def login(streak_secs: float = 5.0, welcome_secs: float = 1.5):
     cache = {"nombre": None, "pct": 0.0, "color": (0, 0, 255)}
     streak_nombre: str | None = None      # nombre que se está repitiendo
     streak_inicio: float | None = None    # instante en que empezó el streak
+
+    # Ventana redimensionable: el usuario puede agrandarla; el contenido
+    # se escala con la resolución del frame (ver _escala()).
+    cv2.namedWindow("Login facial", cv2.WINDOW_NORMAL)
 
     while True:
         ret, frame = cap.read()
@@ -287,10 +310,11 @@ def login(streak_secs: float = 5.0, welcome_secs: float = 1.5):
                 etiqueta = f"Desconocido  {pct:.1f}%"
                 cache    = {"nombre": None, "pct": pct, "color": color}
 
-            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 1)
+            s = _escala(frame)
+            cv2.rectangle(frame, (x, y), (x+w, y+h), color, max(1, int(s)))
             _esquinas(frame, x, y, w, h, color)
-            cv2.putText(frame, etiqueta, (x, y - 12),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, color, 2)
+            cv2.putText(frame, etiqueta, (x, y - int(12 * s)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.65 * s, color, max(1, int(2 * s)))
 
         # ---- Auto-cierre por streak de reconocimientos ----------------
         if streak_secs > 0:
@@ -307,9 +331,10 @@ def login(streak_secs: float = 5.0, welcome_secs: float = 1.5):
             if streak_inicio is not None:
                 progreso = min(1.0, (ahora - streak_inicio) / streak_secs)
                 fh, fw = frame.shape[:2]
-                bar_w, bar_h = 360, 14
+                s = _escala(frame)
+                bar_w, bar_h = int(fw * 0.56), int(14 * s)
                 x0 = (fw - bar_w) // 2
-                y0 = fh - 50
+                y0 = fh - int(50 * s)
                 cv2.rectangle(frame, (x0, y0), (x0 + bar_w, y0 + bar_h),
                               (40, 40, 40), -1)
                 cv2.rectangle(frame, (x0, y0),
@@ -317,26 +342,29 @@ def login(streak_secs: float = 5.0, welcome_secs: float = 1.5):
                               (0, 220, 80), -1)
                 restante = max(0.0, streak_secs - (ahora - streak_inicio))
                 cv2.putText(frame, f"Identificando: {streak_nombre}  ({restante:.1f}s)",
-                            (x0, y0 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
-                            (0, 220, 80), 2)
+                            (x0, y0 - int(8 * s)), cv2.FONT_HERSHEY_SIMPLEX, 0.55 * s,
+                            (0, 220, 80), max(1, int(2 * s)))
 
             if streak_inicio is not None and (ahora - streak_inicio) >= streak_secs:
                 fh, fw = frame.shape[:2]
+                s = _escala(frame)
                 overlay = frame.copy()
-                cv2.rectangle(overlay, (0, fh // 2 - 90), (fw, fh // 2 + 90),
+                banda = int(90 * s)
+                cv2.rectangle(overlay, (0, fh // 2 - banda), (fw, fh // 2 + banda),
                               (0, 0, 0), -1)
                 cv2.addWeighted(overlay, 0.65, frame, 0.35, 0, frame)
+                f_big, f_sub = 1.4 * s, 0.7 * s
                 texto = f"Bienvenido, {streak_nombre}!"
                 (tw, _), _ = cv2.getTextSize(
-                    texto, cv2.FONT_HERSHEY_SIMPLEX, 1.4, 4)
-                cv2.putText(frame, texto, ((fw - tw) // 2, fh // 2 + 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.4, (0, 255, 0), 4,
+                    texto, cv2.FONT_HERSHEY_SIMPLEX, f_big, int(4 * s))
+                cv2.putText(frame, texto, ((fw - tw) // 2, fh // 2 + int(10 * s)),
+                            cv2.FONT_HERSHEY_SIMPLEX, f_big, (0, 255, 0), max(2, int(4 * s)),
                             cv2.LINE_AA)
                 sub = "Lanzando el juego..."
                 (sw, _), _ = cv2.getTextSize(
-                    sub, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-                cv2.putText(frame, sub, ((fw - sw) // 2, fh // 2 + 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (220, 220, 220), 2,
+                    sub, cv2.FONT_HERSHEY_SIMPLEX, f_sub, int(2 * s))
+                cv2.putText(frame, sub, ((fw - sw) // 2, fh // 2 + int(60 * s)),
+                            cv2.FONT_HERSHEY_SIMPLEX, f_sub, (220, 220, 220), max(1, int(2 * s)),
                             cv2.LINE_AA)
                 t_fin = time.time() + welcome_secs
                 while time.time() < t_fin:
@@ -345,9 +373,10 @@ def login(streak_secs: float = 5.0, welcome_secs: float = 1.5):
                 cache["nombre"] = streak_nombre
                 break
 
+        s = _escala(frame)
         cv2.putText(frame, "ESC: salir",
-                    (10, frame.shape[0] - 12), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5, (180, 180, 180), 1)
+                    (int(10 * s), frame.shape[0] - int(12 * s)), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5 * s, (180, 180, 180), max(1, int(s)))
         cv2.imshow("Login facial", frame)
         if cv2.waitKey(1) & 0xFF == 27:
             break

@@ -51,8 +51,10 @@ class App(tk.Tk):
         super().__init__()
         self.title("Piedra-Papel-Tijera con login facial")
         self.geometry("440x600")
+        self.minsize(440, 600)            # no más pequeña que el diseño base
+        self.resizable(True, True)        # se puede agrandar a gusto
         self.configure(bg=BG)
-        self.resizable(False, False)
+        self._centrar(440, 600)
 
         # Nombre del usuario identificado (None si nadie se loguea o se
         # cierra la ventana). Lo lee `main` tras salir del mainloop.
@@ -68,6 +70,13 @@ class App(tk.Tk):
             threading.Thread(target=self._descargar_modelos, daemon=True).start()
 
     # ---------------------------------------------------------------- UI
+
+    def _centrar(self, w: int, h: int) -> None:
+        """Coloca la ventana centrada (un poco por encima del centro)."""
+        self.update_idletasks()
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        x, y = (sw - w) // 2, max(0, (sh - h) // 3)
+        self.geometry(f"{w}x{h}+{x}+{y}")
 
     def _build(self):
         tk.Label(self, text="◈", font=(MONO, 38), bg=BG, fg=GREEN).pack(pady=(24, 0))
