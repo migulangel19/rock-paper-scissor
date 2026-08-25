@@ -315,10 +315,13 @@ Meta-selector: **HedgeBot** con `η = 0.3` y `decay = 0.99`.
 
 ### 6.2 Base de embeddings faciales
 
-- **Fichero**: [usuarios.pkl](usuarios.pkl)
+- **Fichero**: `usuarios.pkl` (no versionado)
 - **Formato**: `dict[username -> list[np.ndarray(128,)]]`
-- **Contenido actual**: 2 usuarios (Pablo Barranco, Miguel Merino),
-  50 embeddings cada uno.
+- **Contenido**: 50 embeddings por usuario registrado. Durante el
+  desarrollo se registraron 3 usuarios.
+- **Privacidad**: al tratarse de datos biométricos, el fichero está en
+  el `.gitignore` y no se publica. Se genera en local con
+  `app.py -> Registrar usuario`.
 
 ### 6.3 Datos del bot RPS (sintéticos)
 

@@ -1,0 +1,13 @@
+# Visión por computador
+opencv-python==4.11.0.86
+opencv-contrib-python==4.11.0.86   # FaceDetectorYN + FaceRecognizerSF
+mediapipe==0.10.21                 # API legacy mp.solutions (Hands)
+
+# ML clásico y datos
+numpy==1.26.4                      # lo exige mediapipe 0.10.21
+scikit-learn==1.8.0
+pandas==3.0.3
+joblib==1.5.3
+
+# Nota: el GUI de login usa Tkinter (no se instala con pip).
+#   Debian/Ubuntu:  sudo apt-get install -y python3-tk
