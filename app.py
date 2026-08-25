@@ -23,6 +23,7 @@ Para ejecutarlo:
 
 from __future__ import annotations
 
+import queue
 import subprocess
 import sys
 import threading
@@ -44,6 +45,34 @@ MONO   = "Courier"
 UI     = "Segoe UI"
 
 
+class _CamaraWorker:
+    """Hilo único y persistente para todo el trabajo con OpenCV HighGUI.
+
+    OpenCV está compilado con backend Qt5, y Qt liga sus ventanas y timers al
+    hilo que los crea. Si el registro corre en un hilo y el login en otro, la
+    segunda llamada a `cv2.namedWindow` se queda bloqueada para siempre: el
+    hilo dueño de los objetos Qt ya ha muerto. Encauzando *todas* las llamadas
+    a `login_facial` por este mismo hilo el problema desaparece, y el mainloop
+    de Tk sigue libre para repintar la ventana.
+    """
+
+    def __init__(self) -> None:
+        self._tareas: queue.Queue = queue.Queue()
+        self._hilo = threading.Thread(target=self._bucle, daemon=True)
+        self._hilo.start()
+
+    def _bucle(self) -> None:
+        while True:
+            tarea = self._tareas.get()
+            if tarea is None:                 # señal de parada
+                return
+            tarea()
+
+    def enviar(self, fn, *args) -> None:
+        """Encola `fn(*args)` para ejecutarse en el hilo de cámara."""
+        self._tareas.put(lambda: fn(*args))
+
+
 class App(tk.Tk):
     """Ventana principal: login facial + arranque del juego."""
 
@@ -59,6 +88,10 @@ class App(tk.Tk):
         # Nombre del usuario identificado (None si nadie se loguea o se
         # cierra la ventana). Lo lee `main` tras salir del mainloop.
         self.usuario: str | None = None
+
+        # Todas las sesiones de cámara (registro y login) pasan por este
+        # único hilo; ver el docstring de `_CamaraWorker`.
+        self._camara = _CamaraWorker()
 
         self._build()
         self._refresh_users()
@@ -177,7 +210,7 @@ class App(tk.Tk):
             return
         self._status("Abriendo cámara...", FG_DIM)
         self._busy(True)
-        threading.Thread(target=self._run_login, daemon=True).start()
+        self._camara.enviar(self._run_login)
 
     def _run_login(self):
         try:
@@ -220,7 +253,7 @@ class App(tk.Tk):
 
         self._status("Abriendo cámara para registro...", FG_DIM)
         self._busy(True)
-        threading.Thread(target=self._run_registro, args=(nombre,), daemon=True).start()
+        self._camara.enviar(self._run_registro, nombre)
 
     def _run_registro(self, nombre: str):
         try:
