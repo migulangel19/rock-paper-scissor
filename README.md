@@ -68,22 +68,48 @@ source venv/bin/activate
 python app.py
 ```
 
-**First time — register.** Type a name, press the register button, look at the
-camera, press `SPACE`, and move your head gently while the bottom bar fills up.
-It captures 50 embeddings so the match is robust to pose, lighting and
-expression.
+### 1. Register — first time only
 
-**Then — log in and play.** Press the main button. The camera identifies you,
-holds a 1.5 s confidence streak with a green progress bar, greets you, and
-launches the game.
+Type a name, press **Registrar usuario**, look at the camera and press `SPACE`.
+Move your head gently while the bottom bar fills up: it captures 50 embeddings,
+which is what makes the match robust to pose, lighting and expression. Press
+`ESC` to cancel.
 
-**In the game:**
+### 2. Log in
+
+Press **Iniciar sesión y jugar**. The camera identifies you and a green bar
+tracks a 1.5 s streak of sustained recognition; hold still until it completes.
+It greets you and launches the game in its own window.
+
+### 3. Play a round
+
+1. Press `SPACE` to start the round.
+2. The bot **locks in its move before the countdown**, without looking at your
+   hand. It predicts you from your past moves, never by peeking at the current
+   frame.
+3. A `3 → 2 → 1 → ¡YA!` countdown runs, 0.8 s per step.
+4. On **"¡YA!"** a single frame is captured: MediaPipe extracts your 21 hand
+   landmarks and the SVM classifies the gesture.
+5. The result panel shows both moves as icons plus **GANAS / PIERDES / EMPATE**
+   for 2.5 s, then the game returns to idle, ready for the next round.
+
+Hold your hand **flat and facing the camera**. Distance does not matter — the
+landmarks are scale-normalised — but a hand seen edge-on or half out of frame
+will not be detected. If no hand is visible at the exact "¡YA!" instant the
+round is voided and nothing is scored; just press `SPACE` again.
+
+A running scoreboard (`Tu / Empates / Bot`) stays on screen the whole time.
 
 | Key | Action |
 | --- | --- |
-| `SPACE` | Start the 3-2-1 countdown — throw your move on "¡YA!" |
-| `r` | Reset the scoreboard and the bot's learned weights |
-| `q` | Quit |
+| `SPACE` | Play a round |
+| `r` | Reset the scoreboard **and** the bot's learned weights |
+| `q` | Quit and print the final tally to the terminal |
+
+The bot needs data before it can exploit you. Over five rounds you are close to
+coin-flipping; the weights only start concentrating on a pattern after a few
+dozen rounds, so play a long session if you want to watch it adapt. Pressing
+`r` wipes that memory and starts it from scratch.
 
 To try the game without the login step:
 

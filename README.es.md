@@ -67,22 +67,48 @@ source venv/bin/activate
 python app.py
 ```
 
-**La primera vez — registrarse.** Escribe un nombre, pulsa el botón de
-registro, mira a cámara, pulsa `SPACE` y mueve la cabeza con suavidad mientras
-se completa la barra inferior. Captura 50 embeddings para que el matching sea
-robusto a pose, iluminación y expresión.
+### 1. Registrarse — solo la primera vez
 
-**Después — iniciar sesión y jugar.** Pulsa el botón principal. La cámara te
-identifica, mantiene un streak de confianza de 1,5 s con una barra verde, te
-saluda y lanza el juego.
+Escribe un nombre, pulsa **Registrar usuario**, mira a cámara y pulsa `SPACE`.
+Mueve la cabeza con suavidad mientras se completa la barra inferior: captura 50
+embeddings, que es lo que hace el matching robusto a pose, iluminación y
+expresión. `ESC` cancela.
 
-**En el juego:**
+### 2. Iniciar sesión
+
+Pulsa **Iniciar sesión y jugar**. La cámara te identifica y una barra verde
+marca un streak de 1,5 s de reconocimiento sostenido; aguanta quieto hasta que
+se complete. Te saluda y lanza el juego en su propia ventana.
+
+### 3. Jugar una ronda
+
+1. Pulsa `SPACE` para empezar la ronda.
+2. El bot **fija su jugada antes de la cuenta atrás**, sin mirarte la mano. Te
+   predice a partir de tus jugadas anteriores, nunca espiando el frame actual.
+3. Corre la cuenta atrás `3 → 2 → 1 → ¡YA!`, a 0,8 s por paso.
+4. En el **"¡YA!"** se captura un único frame: MediaPipe extrae los 21
+   landmarks de tu mano y el SVM clasifica el gesto.
+5. El panel de resultado muestra ambas jugadas con iconos más **GANAS /
+   PIERDES / EMPATE** durante 2,5 s, y el juego vuelve a reposo, listo para la
+   siguiente ronda.
+
+Pon la mano **plana y de frente a la cámara**. La distancia da igual — los
+landmarks están normalizados por escala — pero una mano de canto o medio fuera
+del encuadre no se detecta. Si no hay mano visible justo en el instante del
+"¡YA!", la ronda se anula y no puntúa; vuelve a pulsar `SPACE`.
+
+El marcador (`Tu / Empates / Bot`) está visible en pantalla todo el rato.
 
 | Tecla | Acción |
 | --- | --- |
-| `SPACE` | Arranca la cuenta atrás 3-2-1 — saca tu jugada en el "¡YA!" |
-| `r` | Reinicia el marcador y los pesos aprendidos del bot |
-| `q` | Salir |
+| `SPACE` | Jugar una ronda |
+| `r` | Reinicia el marcador **y** los pesos aprendidos del bot |
+| `q` | Salir e imprimir el recuento final en el terminal |
+
+El bot necesita datos antes de poder explotarte. En cinco rondas estás cerca de
+lanzar una moneda; los pesos no empiezan a concentrarse en un patrón hasta unas
+cuantas decenas de rondas, así que juega una sesión larga si quieres verlo
+adaptarse. Pulsar `r` borra esa memoria y lo devuelve a cero.
 
 Para probar el juego sin pasar por el login:
 
